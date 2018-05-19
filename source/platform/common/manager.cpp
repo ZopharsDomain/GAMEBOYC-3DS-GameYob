@@ -6,12 +6,13 @@
 #include <fstream>
 #include <sstream>
 
+#include "libs/stb_image/stb_image.h"
+
 #include "platform/common/cheatengine.h"
 #include "platform/common/config.h"
-#include "platform/common/filechooser.h"
+#include "platform/common/menu/filechooser.h"
 #include "platform/common/manager.h"
-#include "platform/common/menu.h"
-#include "platform/common/stb_image.h"
+#include "platform/common/menu/menu.h"
 #include "platform/audio.h"
 #include "platform/gfx.h"
 #include "platform/input.h"
@@ -619,7 +620,7 @@ void mgrPowerOn(const char* romFile) {
         romStream.close();
         saveStream.close();
 
-        cheatEngine->loadCheats((romName + ".cht").c_str());
+        cheatEngine->loadCheats(romName + ".cht");
 
         if(mgrStateExists(-1)) {
             mgrLoadState(-1);
@@ -682,6 +683,7 @@ void mgrSelectRom() {
     if(!chooserInitialized) {
         chooserInitialized = true;
 
+        std::string& romPath = configGetRomPath();
         DIR* dir = opendir(romPath.c_str());
         if(dir) {
             closedir(dir);
@@ -856,11 +858,7 @@ bool mgrTryRawBorderFile(std::string border) {
         int imgHeight;
         int imgDepth;
         u8* image = stbi_load(border.c_str(), &imgWidth, &imgHeight, &imgDepth, STBI_rgb_alpha);
-        if(image == NULL || imgDepth != STBI_rgb_alpha) {
-            if(image != NULL) {
-                stbi_image_free(image);
-            }
-
+        if(image == NULL) {
             systemPrintDebug("Failed to decode image file.\n");
             return false;
         }
@@ -915,7 +913,7 @@ void mgrRefreshBorder() {
 
     if(customBordersEnabled && gameboy != NULL && gameboy->cartridge != NULL) {
         if(!mgrTryBorderName(mgrGetRomName())) {
-            mgrTryBorderFile(borderPath);
+            mgrTryBorderFile(configGetBorderPath());
         }
     }
 }
@@ -1093,7 +1091,10 @@ void mgrRun() {
                     char timeDisplay[6] = {0};
                     strncpy(timeDisplay, timeString, 5);
 
-                    int spaces = uiGetWidth() - (int) strlen(timeDisplay) - fpsLength;
+                    int width = 0;
+                    uiGetSize(&width, NULL);
+
+                    int spaces = width - (int) strlen(timeDisplay) - fpsLength;
                     for(int i = 0; i < spaces; i++) {
                         uiPrint(" ");
                     }

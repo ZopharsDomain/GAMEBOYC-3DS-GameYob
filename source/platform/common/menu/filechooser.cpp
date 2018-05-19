@@ -6,7 +6,7 @@
 #include <vector>
 #include <platform/ui.h>
 
-#include "platform/common/filechooser.h"
+#include "platform/common/menu/filechooser.h"
 #include "platform/input.h"
 #include "platform/system.h"
 
@@ -28,8 +28,8 @@ FileChooser::FileChooser(std::string directory, std::vector<std::string> extensi
 
 int nameSortFunction(std::string &a, std::string &b) {
     // ".." sorts before everything except itself.
-    bool aIsParent = strcmp(a.c_str(), "..") == 0;
-    bool bIsParent = strcmp(b.c_str(), "..") == 0;
+    bool aIsParent = a == "..";
+    bool bIsParent = b == "..";
 
     if(aIsParent && bIsParent) {
         return 0;
@@ -261,7 +261,7 @@ void FileChooser::refreshContents() {
             }
 
             if(entry->d_type & DT_DIR || isValidExtension) {
-                if(strcmp(".", entry->d_name) != 0) {
+                if(strcmp(entry->d_name, ".") != 0) {
                     int flag = 0;
                     if(entry->d_type & DT_DIR) {
                         flag |= FLAG_DIRECTORY;
@@ -280,7 +280,7 @@ void FileChooser::refreshContents() {
                                 name = name.substr(0, dot);
                             }
 
-                            for(uint i = 0; i < unmatchedStates.size(); i++) {
+                            for(u32 i = 0; i < unmatchedStates.size(); i++) {
                                 if(name.compare(unmatchedStates[i]) == 0) {
                                     flag |= FLAG_SUSPENDED;
                                     unmatchedStates.erase(unmatchedStates.begin() + i);
@@ -328,10 +328,11 @@ void FileChooser::refreshContents() {
         closedir(dir);
     }
 
-    quickSort(filenames, flags, nameSortFunction, 0, numFiles - 1);
+    quickSort(filenames, flags, nameSortFunction, 0, numFiles > 0 ? (u32) (numFiles - 1) : 0);
 
-    if(selection >= numFiles)
+    if(selection >= numFiles) {
         selection = 0;
+    }
 
     if(!matchFile.empty()) {
         for(int i = 0; i < numFiles; i++) {
@@ -349,7 +350,8 @@ void FileChooser::refreshContents() {
 }
 
 void FileChooser::redrawChooser() {
-    int screenLen = uiGetWidth();
+    int screenLen = 0;
+    uiGetSize(&screenLen, NULL);
 
     uiClear();
 
@@ -360,7 +362,7 @@ void FileChooser::redrawChooser() {
 
     uiPrint("%s", currDirName.c_str());
 
-    for(uint j = 0; j < screenLen - currDirName.length(); j++) {
+    for(u32 j = 0; j < screenLen - currDirName.length(); j++) {
         uiPrint(" ");
     }
 
@@ -397,7 +399,7 @@ void FileChooser::redrawChooser() {
             uiPrint("/");
         }
 
-        for(uint j = 0; j < displayLen - fileName.length(); j++) {
+        for(u32 j = 0; j < displayLen - fileName.length(); j++) {
             uiPrint(" ");
         }
 
@@ -416,7 +418,7 @@ bool FileChooser::updateChooser(char** result) {
     while((key = uiReadKey()) != UI_KEY_NONE) {
         if(key == UI_KEY_A) {
             if(flags[selection] & FLAG_DIRECTORY) {
-                if(strcmp(filenames[selection].c_str(), "..") == 0) {
+                if(filenames[selection] == "..") {
                     navigateBack();
                 } else {
                     directory += filenames[selection] + "/";
@@ -482,7 +484,10 @@ bool FileChooser::updateChooser(char** result) {
  * for free()ing it.
  */
 char* FileChooser::chooseFile() {
-    filesPerPage = uiGetHeight() - 1;
+    int height = 0;
+    uiGetSize(NULL, &height);
+
+    filesPerPage = height - 1;
 
     refreshContents();
     redrawChooser();

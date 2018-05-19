@@ -1,5 +1,9 @@
 .idea
+cmake-build-debug
 CMakeLists.txt
+CMakeLists.txt.sdl
+CMakeLists.txt.3ds
+CMakeLists.txt.switch
 
 build
 output

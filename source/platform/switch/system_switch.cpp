@@ -1,32 +1,28 @@
-#ifdef BACKEND_SDL
+#ifdef BACKEND_SWITCH
+
+#include <string.h>
+#include <unistd.h>
 
 #include <fstream>
 
-#include <SDL2/SDL.h>
+#include <switch.h>
 
 #include "platform/common/config.h"
 #include "platform/common/manager.h"
-#include "platform/common/menu.h"
+#include "platform/common/menu/menu.h"
 #include "platform/audio.h"
-#include "platform/input.h"
 #include "platform/gfx.h"
+#include "platform/input.h"
 #include "platform/system.h"
 #include "platform/ui.h"
 #include "printer.h"
-
-#ifdef WIN32
-#include <io.h>
-#define access _access
-#endif
-
-extern void gfxSetWindowSize(int width, int height);
 
 static bool requestedExit;
 
 static int numPrinted;
 
 bool systemInit(int argc, char* argv[]) {
-    if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO) != 0 || !gfxInit()) {
+    if(!gfxInit()) {
         return false;
     }
 
@@ -34,9 +30,9 @@ bool systemInit(int argc, char* argv[]) {
     uiInit();
     inputInit();
 
-    numPrinted = 0;
-
     requestedExit = false;
+
+    numPrinted = 0;
 
     return true;
 }
@@ -46,26 +42,10 @@ void systemExit() {
     uiCleanup();
     audioCleanup();
     gfxCleanup();
-
-    SDL_Quit();
 }
 
 bool systemIsRunning() {
-    if(requestedExit) {
-        return false;
-    }
-
-    SDL_Event event;
-    while(SDL_PollEvent(&event)) {
-        if(event.type == SDL_QUIT) {
-            requestedExit = true;
-            return false;
-        } else if(event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
-            gfxSetWindowSize(event.window.data1, event.window.data2);
-        }
-    }
-
-    return true;
+    return !requestedExit && appletMainLoop();
 }
 
 void systemRequestExit() {
@@ -81,7 +61,7 @@ const std::string systemDefaultBorderPath() {
 }
 
 const std::string systemDefaultRomPath() {
-    return "gb/";
+    return "/gb/";
 }
 
 void systemPrintDebug(const char* str, ...) {
@@ -96,10 +76,11 @@ void systemPrintDebug(const char* str, ...) {
 }
 
 bool systemGetIRState() {
-    return false;
+    return false; // TODO
 }
 
 void systemSetIRState(bool state) {
+    // TODO
 }
 
 const std::string systemGetIP() {
@@ -119,6 +100,7 @@ FILE* systemSocketConnect(const std::string ipAddress, u16 port) {
 }
 
 void systemSetRumble(bool rumble) {
+    // TODO
 }
 
 u32* systemGetCameraImage() {
